@@ -1,8 +1,12 @@
 <?php
 
 use App\Models\Announcement;
+use App\Models\Order;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Intervention\Image\Facades\Image;
 
 /*
@@ -11,8 +15,8 @@ use Intervention\Image\Facades\Image;
 |--------------------------------------------------------------------------
 |
 | Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
 |
 */
 
@@ -58,6 +62,7 @@ Route::patch('/announcement/update', function (Request $request) {
         'buttonColor' => 'required',
         'buttonLink' => 'required|url',
         'imageUpload' => 'file|image|max:20000',
+        'imageUploadFilePond' => 'string|nullable',
     ]);
 
     if ($request->imageUpload) {
@@ -79,9 +84,24 @@ Route::patch('/announcement/update', function (Request $request) {
         // $fields = array_merge($fields, ['imageUpload' => $path]);
     }
 
+    if ($request->imageUploadFilePond) {
+        $newFilename = Str::after($request->imageUploadFilePond, 'tmp/');
+        Storage::disk('public')->move($request->imageUploadFilePond, "images/$newFilename");
+        $fields = array_merge($fields, ['imageUploadFilePond' => "images/$newFilename"]);
+    }
+
+
     $announcement = Announcement::first();
 
     $announcement->update($fields);
 
     return back()->with('success_message', 'Announcement was updated!');
+});
+
+Route::post('/upload', function (Request $request) {
+    if ($request->imageUploadFilePond) {
+        $path = $request->file('imageUploadFilePond')->store('tmp', 'public');
+    }
+
+    return $path;
 });
